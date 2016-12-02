@@ -15,16 +15,29 @@ var svgo = new SVGO({
 module.exports = function (content) {
   this.cacheable && this.cacheable();
   var loader = this;
+  // var callback = this.async();
+
   // process SVG
   content = content.replace(SVG_PATTERN, function (match, preAttributes, fileName, postAttributes) {
+
     var filePath = path.join(loader.context, fileName);
     loader.addDependency(filePath);
-    var fileContent = fs.readFileSync(filePath, {encoding: 'utf-8'});
+
+    var fileContent = fs.readFileSync(filePath, { encoding: 'utf-8' });
+    fileContent = fileContent.replace(/^<svg/i, '<svg ' + preAttributes + ' ' + postAttributes + ' ');
+    var finalResult = fileContent;
+
     // It's callback, But it's sync
     svgo.optimize(fileContent, function (result) {
-      fileContent = result.data;
+      if (result.data) {
+        finalResult = result.data.replace(/^<svg/i, '<svg role="presentation" focusable="false" ');
+      } else {
+        console.log(filePath + ' cannot be parsed.', result);
+        finalResult = fileContent;
+      }
     });
-    return fileContent.replace(/^<svg/i, '<svg role="presentation" focusable="false" ' + preAttributes + ' ' + postAttributes + ' ');
+    return finalResult;
   });
   return content;
+
 };
